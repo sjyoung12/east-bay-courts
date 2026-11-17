@@ -3,8 +3,8 @@ name: Refresh Oakland data and deploy
 on:
   schedule:
     # Every 15 minutes from 5am to 11pm Pacific (GitHub cron is UTC and often runs a few minutes late).
-    - cron: "*/15 12-23 * * *"
-    - cron: "*/15 0-7 * * *"
+    - cron: "7,22,37,52 12-23 * * *"
+    - cron: "7,22,37,52 0-7 * * *"
   workflow_dispatch:
   push:
     branches: [main]
