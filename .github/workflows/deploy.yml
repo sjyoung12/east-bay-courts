@@ -1,0 +1,58 @@
+name: Refresh Oakland data and deploy
+
+on:
+  schedule:
+    # Every 15 minutes from 5am to 11pm Pacific (GitHub cron is UTC and often runs a few minutes late).
+    - cron: "*/15 12-23 * * *"
+    - cron: "*/15 0-7 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch Oakland availability
+        id: fetch
+        continue-on-error: true
+        run: node scripts/fetch-oakland.mjs site/data/oakland.json
+
+      - name: Keep the last good data if the fetch failed
+        if: steps.fetch.outcome != 'success'
+        run: |
+          mkdir -p site/data
+          curl -fsSL "https://sjyoung12.github.io/east-bay-courts/data/oakland.json" -o site/data/oakland.json \
+            || echo '{"courts":[],"error":"unavailable"}' > site/data/oakland.json
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

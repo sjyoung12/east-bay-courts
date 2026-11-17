@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#1f4d3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Courts">
+<title>East Bay Courts</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231f4d3a'/%3E%3Ccircle cx='32' cy='32' r='17' fill='%23d8f03a'/%3E%3Cpath d='M18 22c8 4 8 16 0 20M46 22c-8 4-8 16 0 20' stroke='%231f4d3a' stroke-width='3' fill='none'/%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%231f4d3a'/%3E%3Ccircle cx='32' cy='32' r='17' fill='%23d8f03a'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one narrow column. Search controls, then "free in your window" across both cities, then per-park hour strips. */
+:root {
+  --bg: #f3f5f1;
+  --surface: #ffffff;
+  --ink: #18241e;
+  --muted: #5d6b63;
+  --line: #d9e0da;
+  --court: #1f4d3a;
+  --ball: #d8f03a;
+  --open: #2f8f5b;
+  --open-soft: #dcf0e3;
+  --half: #9fd3b4;
+  --booked: #c9d0cb;
+  --past: #eceeec;
+  --warn: #9a6a00;
+  --danger: #a33a2a;
+  --font-display: "Barlow Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101713; --surface: #18221c; --ink: #e6ede8; --muted: #9aa9a0; --line: #2a372f;
+    --court: #7fc4a0; --ball: #d8f03a; --open: #4cc283; --open-soft: #1d3a2a; --half: #2f6b4b;
+    --booked: #333f38; --past: #1c2520; --warn: #e2b54a; --danger: #ef8a78; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101713; --surface: #18221c; --ink: #e6ede8; --muted: #9aa9a0; --line: #2a372f;
+  --court: #7fc4a0; --ball: #d8f03a; --open: #4cc283; --open-soft: #1d3a2a; --half: #2f6b4b;
+  --booked: #333f38; --past: #1c2520; --warn: #e2b54a; --danger: #ef8a78; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); -webkit-text-size-adjust: 100%; }
+.wrap { max-width: 640px; margin: 0 auto; padding: 16px 16px 48px; display: grid; gap: 16px; }
+
+header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+h1 { font: 700 28px/1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; margin: 0; color: var(--court); }
+h1 span { background: var(--ball); color: #18241e; padding: 0 6px; border-radius: 3px; }
+.status { font-size: 12px; color: var(--muted); text-align: right; cursor: pointer; line-height: 1.35; }
+.status .warn { color: var(--warn); }
+.status .err { color: var(--danger); }
+
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 12px; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.field { display: grid; gap: 4px; flex: 1 1 110px; }
+label, .label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+input, select, button { font: inherit; color: inherit; }
+input[type="date"], select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.days { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.day { flex: 0 0 auto; min-width: 54px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; text-align: center; line-height: 1.15; }
+.day b { display: block; font: 700 18px/1.1 var(--font-display); }
+.day small { font-size: 11px; color: var(--muted); }
+.day[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--bg); }
+.day[aria-pressed="true"] small { color: inherit; opacity: .8; }
+
+.city { display: grid; gap: 6px; }
+.city-head { display: flex; justify-content: space-between; align-items: baseline; }
+.city-head button { background: none; border: 0; color: var(--court); font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--bg); }
+.chip small { opacity: .7; }
+.sortrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.sortrow button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
+.sortrow button[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--bg); }
+button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--ball); outline-offset: 2px; }
+
+h2 { font: 700 20px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .03em; margin: 0; }
+.summary h2 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.summary .count { font-family: var(--font-display); font-size: 34px; color: var(--open); font-variant-numeric: tabular-nums; }
+.hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.hit { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--open-soft); border-left: 4px solid var(--open); }
+.hit .where { font-weight: 600; }
+.hit .where small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: 1px; }
+.book { flex: 0 0 auto; text-decoration: none; font-weight: 600; font-size: 14px; background: var(--court); color: var(--bg); padding: 8px 12px; border-radius: 8px; }
+.empty { color: var(--muted); margin: 0; }
+.near { font-size: 13px; color: var(--muted); margin: 0; }
+
+.park { display: grid; gap: 8px; }
+.park-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.park-head a { font-size: 13px; color: var(--court); font-weight: 600; }
+.grid { display: grid; grid-template-columns: 52px 1fr; gap: 4px 8px; align-items: center; }
+.court-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.court-name a { color: inherit; }
+.strip, .hours { display: grid; grid-template-columns: repeat(15, 1fr); gap: 2px; }
+.cell { height: 26px; border-radius: 3px; background: var(--booked); }
+.cell.open { background: var(--open); }
+.cell.half { background: linear-gradient(90deg, var(--open) 50%, var(--booked) 50%); }
+.cell.half.second { background: linear-gradient(90deg, var(--booked) 50%, var(--open) 50%); }
+.cell.past { background: var(--past); }
+.cell.nodata { background: repeating-linear-gradient(45deg, var(--past) 0 4px, var(--surface) 4px 8px); }
+.cell.inwin { box-shadow: inset 0 0 0 2px var(--ball); }
+.hours { font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
+.foot { font-size: 12px; color: var(--muted); }
+.foot a { color: inherit; }
+.loading { opacity: .55; transition: opacity .2s; }
+@media (prefers-reduced-motion: reduce) { .loading { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>East Bay <span>Courts</span></h1>
+    <div class="status" id="status" aria-live="polite" title="Tap to refresh">Loading…</div>
+  </header>
+
+  <section class="panel" aria-label="Search">
+    <div class="days" id="days" role="group" aria-label="Date"></div>
+    <div class="row">
+      <div class="field"><label for="from">From</label><select id="from"></select></div>
+      <div class="field"><label for="to">To</label><select id="to"></select></div>
+      <div class="field" style="flex:0 0 auto"><label for="date">Other date</label><input type="date" id="date"></div>
+    </div>
+    <div id="cities" style="display:grid;gap:12px"></div>
+    <div class="sortrow">
+      <span>Sort</span>
+      <button type="button" id="sortPark" aria-pressed="true">By park</button>
+      <button type="button" id="sortNear" aria-pressed="false">Nearest first</button>
+      <span id="geoNote"></span>
+    </div>
+  </section>
+
+  <section class="panel summary" id="summary" aria-live="polite"><p class="empty">Checking courts…</p></section>
+
+  <section class="panel">
+    <div class="legend">
+      <span><i style="background:var(--open)"></i>Open</span>
+      <span><i style="background:linear-gradient(90deg,var(--open) 50%,var(--booked) 50%)"></i>Half hour</span>
+      <span><i style="background:var(--booked)"></i>Booked</span>
+      <span><i style="background:var(--past)"></i>Past</span>
+      <span><i style="background:var(--surface);box-shadow:inset 0 0 0 2px var(--ball)"></i>Your window</span>
+    </div>
+    <div id="detail" style="display:grid;gap:18px"></div>
+  </section>
+
+  <p class="foot">Berkeley data is live from the city's CivicRec system. Oakland data is a snapshot from the city's PerfectMind system, refreshed about every 15 minutes from 5am to 11pm. “Book” opens the city's own booking page: in Oakland it goes straight to that court; in Berkeley it opens the park for that date, where you pick the court and time. Berkeley allows up to 2 hours per booking. <a href="https://github.com/sjyoung12/east-bay-courts">Source</a></p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- config ----------
+  var FIRST_HOUR = 7, LAST_HOUR = 21, NHOURS = LAST_HOUR - FIRST_HOUR + 1; // grid shows 7am..10pm
+  var DAYS_SHOWN = 7;
+
+  var BK_HOST = "https://ca-berkeley.civicrec.com/CA/berkeley-ca";
+  var BK_CATALOG = "50900cc08e08223966673cbdc0c1b7e3";
+  var BK_API_KEY = "00000000000000000000000000000000"; // the slot endpoint accepts any key
+  var BK_PARKS = [
+    { id: "19743", park: "San Pablo", coords: [37.8576, -122.2836], courts: [[68573,"#1"],[77108,"#2"],[77109,"#3"],[77110,"#4"],[77111,"#5"],[77112,"#6"]] },
+    { id: "17523", park: "Grove", coords: [37.8556, -122.2715], courts: [[68523,"#1"],[77093,"#2"]] },
+    { id: "17521", park: "Cedar Rose", coords: [37.8781, -122.2893], courts: [[68499,"#1"],[77102,"#2"]] },
+    { id: "17420", park: "James Kenney", coords: [37.8712, -122.2951], courts: [[68555,"#1"],[77106,"#2"]] },
+    { id: "17517", park: "Live Oak", coords: [37.8838, -122.2691], courts: [[68491,"#1"],[77107,"#2"]] },
+    { id: "17568", park: "Rose Garden", coords: [37.8857, -122.2614], courts: [[77101,"#1"],[77103,"#2"]] },
+    { id: "19744", park: "Willard", coords: [37.8618, -122.2561], courts: [[68579,"#1"],[77113,"#2"]] },
+    { id: "17524", park: "Strawberry Creek", coords: [37.8673, -122.2905], courts: [[68581,"Court"]] }
+  ];
+
+  var OAK_BASE = "https://cityofoakland.perfectmind.com";
+
+  // ---------- helpers ----------
+  function $(id) { return document.getElementById(id); }
+  function pad(n) { return (n < 10 ? "0" : "") + n; }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function mdy(d) { return pad(d.getMonth() + 1) + "/" + pad(d.getDate()) + "/" + d.getFullYear(); }
+  function parseYmd(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function hourLabel(h, short) {
+    var ap = h < 12 || h === 24 ? "am" : "pm", hh = h % 12 === 0 ? 12 : h % 12;
+    return short ? String(hh) : hh + ap;
+  }
+  function apiTime(h) { var ap = h < 12 ? "AM" : "PM", hh = h % 12 === 0 ? 12 : h % 12; return pad(hh) + ":00 " + ap; }
+  function store(k, v) { try { localStorage.setItem("ebc." + k, JSON.stringify(v)); } catch (e) {} }
+  function load(k, d) { try { var v = localStorage.getItem("ebc." + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function miles(a, b) {
+    var R = 3958.8, toR = Math.PI / 180;
+    var dLat = (b[0] - a[0]) * toR, dLng = (b[1] - a[1]) * toR;
+    var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+  function ago(d) {
+    var m = Math.round((Date.now() - d.getTime()) / 60000);
+    return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.round(m / 60) + " hr ago";
+  }
+
+  function bkBookUrl(parkId, date) {
+    var q = "search=Tennis%20court&location%5B" + parkId + "%5D=true" +
+      "&rental%5Bfrom%5D=" + encodeURIComponent(mdy(date)) + "&rental%5Bto%5D=" + encodeURIComponent(mdy(date));
+    return BK_HOST + "/catalog/index/" + BK_CATALOG + "?filter=" + btoa(q);
+  }
+  function oakBookUrl(court, date) {
+    return OAK_BASE + "/Clients/BookMe4LandingPages/Facility?facilityId=" + court.id +
+      "&widgetId=" + oak.widgetId + "&calendarId=" + oak.calendarId +
+      "&arrivalDate=" + ymd(date) + "T19:00:00.000Z";
+  }
+
+  // ---------- state ----------
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var nowHour = new Date().getHours();
+  var defFrom = Math.min(Math.max(nowHour + 1, FIRST_HOUR), LAST_HOUR);
+  var state = {
+    date: today,
+    from: defFrom,
+    to: Math.min(defFrom + 2, LAST_HOUR + 1),
+    hidden: load("hiddenParks", []),     // "City|Park" keys the user switched off
+    sort: load("sort", "park"),
+    here: load("here", null),
+    bk: {}, bkAt: {}                     // Berkeley data by ymd: {facilityId: 48-char string}
+  };
+  var saved = load("window", null);
+  if (saved && saved.from >= FIRST_HOUR && saved.to <= LAST_HOUR + 1 && saved.from < saved.to && saved.to > nowHour) {
+    state.from = saved.from; state.to = saved.to;
+  }
+  var oak = { loaded: false, error: null, courts: [], at: null, startDate: null, days: 0 };
+
+  // Unified court list: {city, park, parkKey, label, coords, freeFor(ymd) -> 48-char string|null, book(date)}
+  function allCourts() {
+    var list = [];
+    BK_PARKS.forEach(function (p) {
+      p.courts.forEach(function (c) {
+        list.push({
+          city: "Berkeley", park: p.park, parkKey: "Berkeley|" + p.park, label: c[1], coords: p.coords,
+          freeFor: function (k) { var d = state.bk[k]; return d ? d[c[0]] || null : null; },
+          book: function (date) { return bkBookUrl(p.id, date); }
+        });
+      });
+    });
+    oak.courts.forEach(function (c) {
+      list.push({
+        city: "Oakland", park: c.park, parkKey: "Oakland|" + c.park, label: c.label, coords: c.coords, address: c.address,
+        freeFor: function (k) { return c.free && c.free[k] || null; },
+        book: function (date) { return oakBookUrl(c, date); }
+      });
+    });
+    return list;
+  }
+
+  function parksByCity() {
+    var map = { Berkeley: [], Oakland: [] }, seen = {};
+    allCourts().forEach(function (c) {
+      if (seen[c.parkKey]) { seen[c.parkKey].n++; return; }
+      seen[c.parkKey] = { key: c.parkKey, park: c.park, city: c.city, n: 1, coords: c.coords };
+      map[c.city].push(seen[c.parkKey]);
+    });
+    map.Oakland.sort(function (a, b) { return a.park.localeCompare(b.park); });
+    return map;
+  }
+
+  // ---------- Berkeley (live) ----------
+  function bkFetch(date, startHour, count) {
+    var p = new URLSearchParams();
+    BK_PARKS.forEach(function (pk) { pk.courts.forEach(function (c) { p.append("facilityIds[]", c[0]); }); });
+    p.set("date", ymd(date)); p.set("time", apiTime(startHour));
+    p.set("slotSize", "3600"); p.set("slotCount", String(count));
+    return fetch(BK_HOST + "/permits/getMultiFacilityAvailabilityBySlot/" + BK_API_KEY, { method: "POST", body: p })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (j) { if (!j.availability) throw new Error((j.errors || ["bad response"]).join("; ")); return j.availability; });
+  }
+  function bkLoad(date) {
+    var key = ymd(date);
+    // The endpoint returns at most 10 slots per call.
+    return Promise.all([bkFetch(date, FIRST_HOUR, 10), bkFetch(date, FIRST_HOUR + 10, NHOURS - 10)]).then(function (parts) {
+      var out = {};
+      parts.forEach(function (av) {
+        Object.keys(av).forEach(function (fid) {
+          var bits = (out[fid] || "0".repeat(48)).split("");
+          Object.keys(av[fid]).forEach(function (k) {
+            var o = av[fid][k];
+            if (!o || typeof o !== "object" || !o.date || o.status !== 2) return;
+            var m = o.date.match(/(\d{2}):(\d{2}) (AM|PM)$/);
+            if (!m) return;
+            var h = (+m[1] % 12) + (m[3] === "PM" ? 12 : 0);
+            bits[h * 2] = "1"; bits[h * 2 + 1] = "1";
+          });
+          out[fid] = bits.join("");
+        });
+      });
+      state.bk[key] = out; state.bkAt[key] = new Date();
+    });
+  }
+
+  // ---------- Oakland (snapshot) ----------
+  function oakLoad() {
+    return fetch("data/oakland.json?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+      .then(function (j) {
+        oak.courts = j.courts || []; oak.at = j.generatedAt ? new Date(j.generatedAt) : null;
+        oak.startDate = j.startDate; oak.days = j.days || 0;
+        oak.calendarId = j.calendarId; oak.widgetId = j.widgetId;
+        oak.loaded = true; oak.error = j.error || null;
+      })
+      .catch(function (e) { oak.loaded = true; oak.error = e.message; });
+  }
+
+  // ---------- rendering ----------
+  function renderDays() {
+    var el = $("days"); el.innerHTML = "";
+    var names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    for (var i = 0; i < DAYS_SHOWN; i++) {
+      var d = new Date(today); d.setDate(today.getDate() + i);
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "day"; b.dataset.d = ymd(d);
+      b.setAttribute("aria-pressed", ymd(d) === ymd(state.date) ? "true" : "false");
+      b.innerHTML = "<small>" + (i === 0 ? "Today" : names[d.getDay()]) + "</small><b>" + d.getDate() + "</b>";
+      b.addEventListener("click", function () { setDate(parseYmd(this.dataset.d)); });
+      el.appendChild(b);
+    }
+    $("date").value = ymd(state.date); $("date").min = ymd(today);
+  }
+
+  function renderSelects() {
+    var f = $("from"), t = $("to"); f.innerHTML = ""; t.innerHTML = "";
+    for (var h = FIRST_HOUR; h <= LAST_HOUR; h++) f.add(new Option(hourLabel(h), h, false, h === state.from));
+    for (var h2 = FIRST_HOUR + 1; h2 <= LAST_HOUR + 1; h2++) t.add(new Option(hourLabel(h2), h2, false, h2 === state.to));
+  }
+
+  function renderParkChips() {
+    var el = $("cities"), map = parksByCity(); el.innerHTML = "";
+    ["Oakland", "Berkeley"].forEach(function (city) {
+      var parks = map[city];
+      var wrap = document.createElement("div"); wrap.className = "city";
+      var allOn = parks.every(function (p) { return state.hidden.indexOf(p.key) < 0; });
+      wrap.innerHTML = "<div class='city-head'><span class='label'>" + city + "</span>" +
+        (parks.length ? "<button type='button' data-city='" + city + "'>" + (allOn ? "None" : "All") + "</button>" : "") + "</div>";
+      var chips = document.createElement("div"); chips.className = "chips";
+      if (!parks.length) chips.innerHTML = "<span class='near'>" + (oak.loaded ? "Oakland data unavailable right now." : "Loading…") + "</span>";
+      parks.forEach(function (p) {
+        var b = document.createElement("button");
+        b.type = "button"; b.className = "chip"; b.dataset.key = p.key;
+        b.setAttribute("aria-pressed", state.hidden.indexOf(p.key) < 0 ? "true" : "false");
+        b.innerHTML = esc(p.park) + " <small>" + p.n + "</small>";
+        b.addEventListener("click", function () {
+          var k = this.dataset.key, i = state.hidden.indexOf(k);
+          if (i >= 0) state.hidden.splice(i, 1); else state.hidden.push(k);
+          store("hiddenParks", state.hidden); renderParkChips(); renderResults();
+        });
+        chips.appendChild(b);
+      });
+      wrap.appendChild(chips);
+      var tog = wrap.querySelector("button[data-city]");
+      if (tog) tog.addEventListener("click", function () {
+        var keys = parks.map(function (p) { return p.key; });
+        state.hidden = state.hidden.filter(function (k) { return keys.indexOf(k) < 0; });
+        if (allOn) state.hidden = state.hidden.concat(keys);
+        store("hiddenParks", state.hidden); renderParkChips(); renderResults();
+      });
+      el.appendChild(wrap);
+    });
+    $("sortPark").setAttribute("aria-pressed", state.sort === "park" ? "true" : "false");
+    $("sortNear").setAttribute("aria-pressed", state.sort === "near" ? "true" : "false");
+  }
+
+  function pastHalf(half) {
+    if (ymd(state.date) !== ymd(today)) return false;
+    var n = new Date();
+    return half < n.getHours() * 2 + (n.getMinutes() >= 30 ? 1 : 0);
+  }
+
+  function visibleCourts() {
+    var list = allCourts().filter(function (c) { return state.hidden.indexOf(c.parkKey) < 0; });
+    if (state.sort === "near" && state.here) {
+      list.forEach(function (c) { c.dist = c.coords ? miles(state.here, c.coords) : 99; });
+      list.sort(function (a, b) { return a.dist - b.dist || a.label.localeCompare(b.label, undefined, { numeric: true }); });
+    } else {
+      list.sort(function (a, b) {
+        return a.city.localeCompare(b.city) * -1 || a.park.localeCompare(b.park) || a.label.localeCompare(b.label, undefined, { numeric: true });
+      });
+    }
+    return list;
+  }
+
+  function renderResults() {
+    var key = ymd(state.date);
+    var a = state.from * 2, b = state.to * 2; // half-hour indices [a, b)
+    var winLabel = hourLabel(state.from) + "–" + hourLabel(state.to);
+    var dateLabel = key === ymd(today) ? "today" : state.date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    var courts = visibleCourts();
+
+    var hits = [], partial = [], noData = {};
+    courts.forEach(function (c) {
+      var f = c.freeFor(key);
+      if (!f) { noData[c.city] = true; return; }
+      var freeHalves = [];
+      for (var i = a; i < b; i++) if (f[i] === "1" && !pastHalf(i)) freeHalves.push(i);
+      if (freeHalves.length === b - a) hits.push(c);
+      else if (freeHalves.length) {
+        // Summarize free stretches inside the window, e.g. "10–10:30am, 11am–12pm".
+        var runs = [], s = freeHalves[0], prev = s;
+        for (var j = 1; j <= freeHalves.length; j++) {
+          if (freeHalves[j] !== prev + 1) { runs.push([s, prev + 1]); s = freeHalves[j]; }
+          prev = freeHalves[j];
+        }
+        partial.push({ c: c, runs: runs });
+      }
+    });
+
+    function halfLabel(h) {
+      var hr = Math.floor(h / 2), m = h % 2 ? ":30" : "";
+      var hh = hr % 12 === 0 ? 12 : hr % 12;
+      return hh + m + (hr < 12 || hr === 24 ? "am" : "pm");
+    }
+    function distTag(c) { return state.sort === "near" && state.here && c.coords ? " · " + c.dist.toFixed(1) + " mi" : ""; }
+
+    var html = "<h2><span>Open " + esc(winLabel) + " " + esc(dateLabel) + "</span><span class='count'>" + hits.length + "</span></h2>";
+    if (hits.length) {
+      html += "<ul class='hits'>" + hits.map(function (c) {
+        return "<li class='hit'><div class='where'>" + esc(c.park) + " " + esc(c.label) + "<span class='tag'>" + c.city + "</span>" +
+          "<small>" + esc(winLabel) + " · all open" + distTag(c) + "</small></div>" +
+          "<a class='book' href='" + esc(c.book(state.date)) + "' target='_blank' rel='noopener'>Book</a></li>";
+      }).join("") + "</ul>";
+    } else {
+      html += "<p class='empty'>No court in your selected parks is open for that whole window.</p>";
+    }
+    if (partial.length) {
+      html += "<p class='near'>Partly open: " + partial.slice(0, 12).map(function (x) {
+        return esc(x.c.park + " " + x.c.label) + " (" + x.runs.map(function (r) { return halfLabel(r[0]) + "–" + halfLabel(r[1]); }).join(", ") + ")";
+      }).join(" · ") + (partial.length > 12 ? " · +" + (partial.length - 12) + " more" : "") + "</p>";
+    }
+    if (noData.Oakland && oak.loaded && !oak.error) html += "<p class='near'>Oakland data covers " + oak.days + " days from " + esc(oak.startDate || "today") + "; this date isn't in it.</p>";
+    if (noData.Berkeley && !state.bk[key]) html += "<p class='near'>Berkeley is still loading.</p>";
+    $("summary").innerHTML = html;
+
+    // Detail strips grouped by park
+    var hoursRow = "<div></div><div class='hours'>";
+    for (var h = FIRST_HOUR; h <= LAST_HOUR; h++) hoursRow += "<span>" + hourLabel(h, true) + "</span>";
+    hoursRow += "</div>";
+    var groups = [], byKey = {};
+    courts.forEach(function (c) {
+      if (!byKey[c.parkKey]) { byKey[c.parkKey] = { c: c, courts: [] }; groups.push(byKey[c.parkKey]); }
+      byKey[c.parkKey].courts.push(c);
+    });
+    $("detail").innerHTML = groups.map(function (g) {
+      var rows = g.courts.map(function (c) {
+        var f = c.freeFor(key), cells = "";
+        for (var hr = FIRST_HOUR; hr <= LAST_HOUR; hr++) {
+          var i0 = hr * 2, i1 = i0 + 1, cls = "cell", st;
+          if (!f) { cls += " nodata"; st = "no data"; }
+          else if (pastHalf(i1)) { cls += " past"; st = "past"; }
+          else {
+            var o0 = f[i0] === "1" && !pastHalf(i0), o1 = f[i1] === "1";
+            if (o0 && o1) { cls += " open"; st = "open"; }
+            else if (o0) { cls += " half"; st = "first half hour open"; }
+            else if (o1) { cls += " half second"; st = "second half hour open"; }
+            else st = "booked";
+          }
+          if (i0 >= a && i1 < b) cls += " inwin";
+          var t = esc(c.park + " " + c.label + ", " + hourLabel(hr) + "–" + hourLabel(hr + 1) + ": " + st);
+          cells += "<span class='" + cls + "' title='" + t + "' aria-label='" + t + "'></span>";
+        }
+        var name = c.city === "Oakland" ? "<a href='" + esc(c.book(state.date)) + "' target='_blank' rel='noopener'>" + esc(c.label) + "</a>" : esc(c.label);
+        return "<div class='court-name'>" + name + "</div><div class='strip'>" + cells + "</div>";
+      }).join("");
+      var first = g.c;
+      var link = first.city === "Berkeley"
+        ? "<a href='" + esc(first.book(state.date)) + "' target='_blank' rel='noopener'>Book ↗</a>"
+        : (first.address ? "<span class='near'>" + esc(first.address) + "</span>" : "");
+      var dist = state.sort === "near" && state.here && first.coords ? " <span class='near'>" + first.dist.toFixed(1) + " mi</span>" : "";
+      return "<div class='park'><div class='park-head'><h2>" + esc(first.park) + "<span class='tag'>" + first.city + "</span>" + dist + "</h2>" + link + "</div>" +
+        "<div class='grid'>" + hoursRow + rows + "</div></div>";
+    }).join("") || "<p class='empty'>No parks selected.</p>";
+  }
+
+  function renderStatus() {
+    var key = ymd(state.date), parts = [];
+    if (state.bkAt[key]) parts.push("Berkeley live · " + state.bkAt[key].toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    else if (state.bkErr) parts.push("<span class='err'>Berkeley: " + esc(state.bkErr) + "</span>");
+    if (oak.error && !oak.courts.length) parts.push("<span class='err'>Oakland unavailable</span>");
+    else if (oak.at) {
+      var stale = Date.now() - oak.at.getTime() > 45 * 60000;
+      parts.push("<span class='" + (stale ? "warn" : "") + "'>Oakland " + ago(oak.at) + "</span>");
+    }
+    $("status").innerHTML = parts.join("<br>") || "Loading…";
+  }
+
+  function refresh() {
+    var key = ymd(state.date);
+    document.querySelector(".wrap").classList.add("loading");
+    state.bkErr = null;
+    var bk = bkLoad(state.date).catch(function (e) { state.bkErr = e.message; });
+    var ok = oakLoad().then(function () { renderParkChips(); });
+    return Promise.all([bk, ok]).then(function () {
+      if (ymd(state.date) === key) renderResults();
+      renderStatus();
+      document.querySelector(".wrap").classList.remove("loading");
+    });
+  }
+
+  function setDate(d) {
+    state.date = d;
+    renderDays();
+    renderResults();
+    refresh();
+  }
+
+  // ---------- wiring ----------
+  $("from").addEventListener("change", function () {
+    state.from = +this.value;
+    if (state.to <= state.from) { state.to = Math.min(state.from + 1, LAST_HOUR + 1); renderSelects(); }
+    store("window", { from: state.from, to: state.to }); renderResults();
+  });
+  $("to").addEventListener("change", function () {
+    state.to = +this.value;
+    if (state.to <= state.from) { state.from = Math.max(state.to - 1, FIRST_HOUR); renderSelects(); }
+    store("window", { from: state.from, to: state.to }); renderResults();
+  });
+  $("date").addEventListener("change", function () { if (this.value) setDate(parseYmd(this.value)); });
+  $("status").addEventListener("click", refresh);
+  $("sortPark").addEventListener("click", function () { state.sort = "park"; store("sort", "park"); renderParkChips(); renderResults(); });
+  $("sortNear").addEventListener("click", function () {
+    state.sort = "near"; store("sort", "near"); renderParkChips();
+    if (!navigator.geolocation) { $("geoNote").textContent = "Location isn't available in this browser."; return; }
+    $("geoNote").textContent = "Finding you…";
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      state.here = [pos.coords.latitude, pos.coords.longitude]; store("here", state.here);
+      $("geoNote").textContent = ""; renderResults();
+    }, function () {
+      $("geoNote").textContent = state.here ? "Using your last location." : "Couldn't get your location.";
+      renderResults();
+    }, { maximumAge: 10 * 60000, timeout: 10000 });
+  });
+  document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState !== "visible") return;
+    var t = state.bkAt[ymd(state.date)];
+    if (!t || Date.now() - t.getTime() > 60000) refresh();
+  });
+
+  renderDays(); renderSelects(); renderParkChips();
+  refresh();
+})();
+</script>
+</body>
+</html>
