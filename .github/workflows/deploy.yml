@@ -1,4 +1,4 @@
-name: Refresh Oakland data and deploy
+name: Refresh court data and deploy
 
 on:
   schedule:
@@ -30,16 +30,28 @@ jobs:
           node-version: 22
 
       - name: Fetch Oakland availability
-        id: fetch
+        id: oakland
         continue-on-error: true
         run: node scripts/fetch-oakland.mjs site/data/oakland.json
 
-      - name: Keep the last good data if the fetch failed
-        if: steps.fetch.outcome != 'success'
+      - name: Fetch Berkeley availability
+        id: berkeley
+        continue-on-error: true
+        run: node scripts/fetch-berkeley.mjs site/data/berkeley.json
+
+      - name: Keep the last good data for any city whose fetch failed
+        if: steps.oakland.outcome != 'success' || steps.berkeley.outcome != 'success'
+        env:
+          OAK: ${{ steps.oakland.outcome }}
+          BK: ${{ steps.berkeley.outcome }}
         run: |
           mkdir -p site/data
-          curl -fsSL "https://sjyoung12.github.io/east-bay-courts/data/oakland.json" -o site/data/oakland.json \
-            || echo '{"courts":[],"error":"unavailable"}' > site/data/oakland.json
+          keep() {
+            curl -fsSL "https://sjyoung12.github.io/east-bay-courts/data/$1.json" -o "site/data/$1.json" \
+              || echo '{"courts":[],"error":"unavailable"}' > "site/data/$1.json"
+          }
+          [ "$OAK" = success ] || keep oakland
+          [ "$BK" = success ] || keep berkeley
 
       - uses: actions/configure-pages@v5
 

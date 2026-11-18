@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-/* Layout: one narrow column. Date + park controls, then per-park hour strips; tap an open block to book. */
+/* Layout: one narrow column. Date, time filter (slider sits on the same hour axis as the grids), parks; then per-park hour strips. Tap an open block to book. */
 :root {
   --bg: #f3f5f1;
   --surface: #ffffff;
@@ -24,7 +24,6 @@
   --ball: #d8f03a;
   --open: #2f8f5b;
   --open-soft: #dcf0e3;
-  --half: #9fd3b4;
   --booked: #c9d0cb;
   --past: #eceeec;
   --warn: #9a6a00;
@@ -36,13 +35,13 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #101713; --surface: #18221c; --ink: #e6ede8; --muted: #9aa9a0; --line: #2a372f;
-    --court: #7fc4a0; --ball: #d8f03a; --open: #4cc283; --open-soft: #1d3a2a; --half: #2f6b4b;
+    --court: #7fc4a0; --ball: #d8f03a; --open: #4cc283; --open-soft: #1d3a2a;
     --booked: #333f38; --past: #1c2520; --warn: #e2b54a; --danger: #ef8a78; color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #101713; --surface: #18221c; --ink: #e6ede8; --muted: #9aa9a0; --line: #2a372f;
-  --court: #7fc4a0; --ball: #d8f03a; --open: #4cc283; --open-soft: #1d3a2a; --half: #2f6b4b;
+  --court: #7fc4a0; --ball: #d8f03a; --open: #4cc283; --open-soft: #1d3a2a;
   --booked: #333f38; --past: #1c2520; --warn: #e2b54a; --danger: #ef8a78; color-scheme: dark;
 }
 
@@ -58,12 +57,9 @@ h1 span { background: var(--ball); color: #18241e; padding: 0 6px; border-radius
 .status .warn { color: var(--warn); }
 .status .err { color: var(--danger); }
 
-.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 12px; }
-.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
-.field { display: grid; gap: 4px; flex: 1 1 110px; }
-label, .label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
-input, select, button { font: inherit; color: inherit; }
-input[type="date"], select { width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: grid; gap: 14px; }
+.label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+button { font: inherit; color: inherit; }
 .days { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
 .day { flex: 0 0 auto; min-width: 54px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); cursor: pointer; text-align: center; line-height: 1.15; }
 .day b { display: block; font: 700 18px/1.1 var(--font-display); }
@@ -71,33 +67,52 @@ input[type="date"], select { width: 100%; min-height: 42px; padding: 8px 10px; b
 .day[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--bg); }
 .day[aria-pressed="true"] small { color: inherit; opacity: .8; }
 
-.city { display: grid; gap: 6px; }
-.city-head { display: flex; justify-content: space-between; align-items: baseline; }
-.city-head button { background: none; border: 0; color: var(--court); font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; }
 .chip[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--bg); }
 .chip small { opacity: .7; }
+.city { display: grid; gap: 6px; }
+.city-head { display: flex; justify-content: space-between; align-items: baseline; }
+.city-head button { background: none; border: 0; color: var(--court); font-size: 13px; font-weight: 600; cursor: pointer; padding: 2px 0; }
 .sortrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .sortrow button { border: 1px solid var(--line); background: var(--bg); border-radius: 999px; padding: 5px 12px; cursor: pointer; font-size: 13px; }
 .sortrow button[aria-pressed="true"] { background: var(--court); border-color: var(--court); color: var(--bg); }
-button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline: 3px solid var(--ball); outline-offset: 2px; }
+button:focus-visible, a:focus-visible { outline: 3px solid var(--ball); outline-offset: 2px; }
+
+/* Time filter */
+.tf { display: grid; gap: 8px; }
+.tf-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tf-value { font: 700 18px/1 var(--font-display); letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.tf-value.off { color: var(--muted); font-weight: 600; }
+.axis { display: grid; grid-template-columns: 52px 1fr; gap: 0 8px; align-items: center; }
+.track { position: relative; height: 40px; touch-action: none; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.rail, .fill { position: absolute; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; }
+.rail { left: 0; right: 0; background: var(--line); }
+.fill { background: var(--court); }
+.track.off .fill { background: var(--booked); }
+.handle {
+  position: absolute; top: 50%; width: 28px; height: 28px; margin: -14px 0 0 -14px; border-radius: 50%;
+  background: var(--surface); border: 3px solid var(--court); padding: 0; cursor: grab; touch-action: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25);
+}
+.handle::before { content: ""; position: absolute; inset: -10px; }
+.track.off .handle { border-color: var(--booked); }
+.handle:active { cursor: grabbing; }
+.dur { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.dur .chip { font-size: 13px; padding: 4px 11px; }
+[hidden] { display: none !important; }
 
 h2 { font: 700 20px/1.1 var(--font-display); text-transform: uppercase; letter-spacing: .03em; margin: 0; }
-.park-head .hrs { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.booked-list { border-top: 1px solid var(--line); padding-top: 12px; }
-.hits { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.hit { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--open-soft); border-left: 4px solid var(--open); }
-.hit .where { font-weight: 600; }
-.hit .where small { display: block; font-weight: 400; color: var(--muted); font-size: 13px; }
 .tag { display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 1px 6px; border-radius: 4px; border: 1px solid var(--line); color: var(--muted); margin-left: 6px; vertical-align: 1px; }
-.book { flex: 0 0 auto; text-decoration: none; font-weight: 600; font-size: 14px; background: var(--court); color: var(--bg); padding: 8px 12px; border-radius: 8px; }
 .empty { color: var(--muted); margin: 0; }
 .near { font-size: 13px; color: var(--muted); margin: 0; }
+.matchline { font-size: 14px; margin: 0; }
+.matchline b { font-family: var(--font-display); font-size: 20px; color: var(--open); font-variant-numeric: tabular-nums; }
+.booked-list { border-top: 1px solid var(--line); padding-top: 12px; display: grid; gap: 6px; }
 
 .park { display: grid; gap: 8px; }
 .park-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.park-head a { font-size: 13px; color: var(--court); font-weight: 600; }
+.park-head .hrs { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .grid { display: grid; grid-template-columns: 52px 1fr; gap: 4px 8px; align-items: center; }
 .court-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .court-name a { color: inherit; }
@@ -108,6 +123,8 @@ h2 { font: 700 20px/1.1 var(--font-display); text-transform: uppercase; letter-s
 .cell.half.second { background: linear-gradient(90deg, var(--booked) 50%, var(--open) 50%); }
 .cell.past { background: var(--past); }
 .cell.nodata { background: repeating-linear-gradient(45deg, var(--past) 0 4px, var(--surface) 4px 8px); }
+.cell.outwin { opacity: .35; }
+.cell.inwin { box-shadow: inset 0 0 0 2px var(--ball); }
 a.cell { display: block; cursor: pointer; }
 a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
 .hours { font-size: 10px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
@@ -115,22 +132,41 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
 .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -2px; margin-right: 4px; }
 .foot { font-size: 12px; color: var(--muted); }
 .foot a { color: inherit; }
-.loading { opacity: .55; transition: opacity .2s; }
-@media (prefers-reduced-motion: reduce) { .loading { transition: none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <h1>East Bay <span>Courts</span></h1>
-    <div class="status" id="status" aria-live="polite" title="Tap to refresh">Loading…</div>
+    <div class="status" id="status" aria-live="polite" title="Tap to reload">Loading…</div>
   </header>
 
-  <section class="panel" aria-label="Search">
+  <section class="panel" aria-label="Filters">
     <div class="days" id="days" role="group" aria-label="Date"></div>
-    <div class="row">
-      <div class="field" style="flex:0 0 auto"><label for="date">Other date</label><input type="date" id="date"></div>
+
+    <div class="tf" role="group" aria-labelledby="tfLabel">
+      <div class="tf-head">
+        <span class="label" id="tfLabel">Time of day</span>
+        <span class="tf-value off" id="tfValue">Any time</span>
+      </div>
+      <div class="chips" id="presets"></div>
+      <div class="axis">
+        <div></div>
+        <div class="track off" id="track">
+          <div class="rail"></div>
+          <div class="fill" id="fill"></div>
+          <button type="button" class="handle" id="hA" role="slider" aria-label="Earliest start"></button>
+          <button type="button" class="handle" id="hB" role="slider" aria-label="Latest end"></button>
+        </div>
+      </div>
+      <div class="axis"><div></div><div class="hours" id="tfHours"></div></div>
+      <div class="dur" id="durRow" hidden>
+        <span>At least</span>
+        <span class="chips" id="durChips"></span>
+        <span>free in a row</span>
+      </div>
     </div>
+
     <div id="cities" style="display:grid;gap:12px"></div>
     <div class="sortrow">
       <span>Sort</span>
@@ -147,10 +183,10 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
       <span><i style="background:var(--booked)"></i>Booked</span>
       <span><i style="background:var(--past)"></i>Past</span>
     </div>
-    <div id="detail" aria-live="polite" style="display:grid;gap:18px"><p class="empty">Checking courts…</p></div>
+    <div id="detail" aria-live="polite" style="display:grid;gap:18px"><p class="empty">Loading courts…</p></div>
   </section>
 
-  <p class="foot">Berkeley data is live from the city's CivicRec system. Oakland data is a snapshot from the city's PerfectMind system, refreshed about every 15 minutes from 5am to 11pm. Tapping an open block or a Book link opens the city's own booking page: in Oakland it goes straight to that court; in Berkeley it opens the park for that date, where you pick the court and time. Berkeley allows up to 2 hours per booking. <a href="https://github.com/sjyoung12/east-bay-courts">Source</a></p>
+  <p class="foot">Availability comes from each city's booking system and refreshes about every 15 minutes from 5am to 11pm. Tapping an open block or a court number opens the city's own booking page: in Oakland it goes straight to that court; in Berkeley it opens the park for that date, where you pick the court and time. Berkeley allows up to 2 hours per booking. <a href="https://github.com/sjyoung12/east-bay-courts">Source</a></p>
 </div>
 
 <script>
@@ -158,25 +194,20 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
   "use strict";
 
   // ---------- config ----------
-  var FIRST_HOUR = 7, LAST_HOUR = 21, NHOURS = LAST_HOUR - FIRST_HOUR + 1; // grid shows 7am..10pm
+  var FIRST_HOUR = 7, LAST_HOUR = 21;          // grid shows 7am..10pm
+  var NHALF = (LAST_HOUR + 1 - FIRST_HOUR) * 2; // 30 half-hour steps on the slider
   var DAYS_SHOWN = 7;
-
   var BK_HOST = "https://ca-berkeley.civicrec.com/CA/berkeley-ca";
   var BK_CATALOG = "50900cc08e08223966673cbdc0c1b7e3";
-  var BK_API_KEY = "00000000000000000000000000000000"; // the slot endpoint accepts any key
-  var BK_PARKS = [
-    // San Pablo #4-6 appear in CivicRec but are kept for walk-on play, so they aren't listed.
-    { id: "19743", park: "San Pablo", coords: [37.8576, -122.2836], courts: [[68573,"#1"],[77108,"#2"],[77109,"#3"]] },
-    { id: "17523", park: "Grove", coords: [37.8556, -122.2715], courts: [[68523,"#1"],[77093,"#2"]] },
-    { id: "17521", park: "Cedar Rose", coords: [37.8781, -122.2893], courts: [[68499,"#1"],[77102,"#2"]] },
-    { id: "17420", park: "James Kenney", coords: [37.8712, -122.2951], courts: [[68555,"#1"],[77106,"#2"]] },
-    { id: "17517", park: "Live Oak", coords: [37.8838, -122.2691], courts: [[68491,"#1"],[77107,"#2"]] },
-    { id: "17568", park: "Rose Garden", coords: [37.8857, -122.2614], courts: [[77101,"#1"],[77103,"#2"]] },
-    { id: "19744", park: "Willard", coords: [37.8618, -122.2561], courts: [[68579,"#1"],[77113,"#2"]] },
-    { id: "17524", park: "Strawberry Creek", coords: [37.8673, -122.2905], courts: [[68581,"Court"]] }
-  ];
-
   var OAK_BASE = "https://cityofoakland.perfectmind.com";
+  var PRESETS = [
+    { label: "Any time", win: null },
+    { label: "Morning", sub: "7–12", win: [0, 10] },
+    { label: "Midday", sub: "11–2", win: [8, 14] },
+    { label: "Afternoon", sub: "12–5", win: [10, 20] },
+    { label: "Evening", sub: "5–10", win: [20, 30] }
+  ];
+  var DURATIONS = [[2, "1h"], [3, "1.5h"], [4, "2h"]]; // in half hours
 
   // ---------- helpers ----------
   function $(id) { return document.getElementById(id); }
@@ -188,13 +219,16 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
     var ap = h < 12 || h === 24 ? "am" : "pm", hh = h % 12 === 0 ? 12 : h % 12;
     return short ? String(hh) : hh + ap;
   }
-  function apiTime(h) { var ap = h < 12 ? "AM" : "PM", hh = h % 12 === 0 ? 12 : h % 12; return pad(hh) + ":00 " + ap; }
+  function halfLabel(absHalf) { // absolute half-hour index of the day -> "9:30am"
+    var hr = Math.floor(absHalf / 2), m = absHalf % 2 ? ":30" : "";
+    var hh = hr % 12 === 0 ? 12 : hr % 12;
+    return hh + m + (hr < 12 || hr === 24 ? "am" : "pm");
+  }
   function store(k, v) { try { localStorage.setItem("ebc." + k, JSON.stringify(v)); } catch (e) {} }
   function load(k, d) { try { var v = localStorage.getItem("ebc." + k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function miles(a, b) {
-    var R = 3958.8, toR = Math.PI / 180;
-    var dLat = (b[0] - a[0]) * toR, dLng = (b[1] - a[1]) * toR;
+    var R = 3958.8, toR = Math.PI / 180, dLat = (b[0] - a[0]) * toR, dLng = (b[1] - a[1]) * toR;
     var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[0] * toR) * Math.cos(b[0] * toR) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
     return 2 * R * Math.asin(Math.sqrt(x));
   }
@@ -203,125 +237,94 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
     return m < 1 ? "just now" : m < 60 ? m + " min ago" : Math.round(m / 60) + " hr ago";
   }
 
-  function bkBookUrl(parkId, date) {
-    var q = "search=Tennis%20court&location%5B" + parkId + "%5D=true" +
-      "&rental%5Bfrom%5D=" + encodeURIComponent(mdy(date)) + "&rental%5Bto%5D=" + encodeURIComponent(mdy(date));
-    return BK_HOST + "/catalog/index/" + BK_CATALOG + "?filter=" + btoa(q);
-  }
-  function oakBookUrl(court, date) {
-    return OAK_BASE + "/Clients/BookMe4LandingPages/Facility?facilityId=" + court.id +
-      "&widgetId=" + oak.widgetId + "&calendarId=" + oak.calendarId +
-      "&arrivalDate=" + ymd(date) + "T19:00:00.000Z";
-  }
-
   // ---------- state ----------
   var today = new Date(); today.setHours(0, 0, 0, 0);
   var state = {
     date: today,
-    hidden: load("hiddenParks", []),     // "City|Park" keys the user switched off
+    win: null,     // null = any time; else [a, b) in half-hour steps from FIRST_HOUR. Resets every visit.
+    dur: 2,        // minimum free stretch, in half hours
+    hidden: load("hiddenParks", []),
     sort: load("sort", "park"),
-    here: load("here", null),
-    bk: {}, bkAt: {}                     // Berkeley data by ymd: {facilityId: 48-char string}
+    here: load("here", null)
   };
-  var oak = { loaded: false, error: null, courts: [], at: null, startDate: null, days: 0 };
+  var cities = {
+    Oakland: { loaded: false, data: null, error: null },
+    Berkeley: { loaded: false, data: null, error: null }
+  };
+  var loadedAt = 0;
 
-  // Unified court list: {city, park, parkKey, label, coords, freeFor(ymd) -> 48-char string|null, book(date)}
+  function bookUrl(court, date) {
+    if (court.city === "Berkeley") {
+      var q = "search=Tennis%20court&location%5B" + court.parkId + "%5D=true" +
+        "&rental%5Bfrom%5D=" + encodeURIComponent(mdy(date)) + "&rental%5Bto%5D=" + encodeURIComponent(mdy(date));
+      return BK_HOST + "/catalog/index/" + BK_CATALOG + "?filter=" + btoa(q);
+    }
+    var d = cities.Oakland.data;
+    return OAK_BASE + "/Clients/BookMe4LandingPages/Facility?facilityId=" + court.id +
+      "&widgetId=" + d.widgetId + "&calendarId=" + d.calendarId + "&arrivalDate=" + ymd(date) + "T19:00:00.000Z";
+  }
+
   function allCourts() {
     var list = [];
-    BK_PARKS.forEach(function (p) {
-      p.courts.forEach(function (c) {
+    ["Oakland", "Berkeley"].forEach(function (city) {
+      var d = cities[city].data;
+      (d && d.courts || []).forEach(function (c) {
         list.push({
-          city: "Berkeley", park: p.park, parkKey: "Berkeley|" + p.park, label: c[1], coords: p.coords,
-          freeFor: function (k) { var d = state.bk[k]; return d ? d[c[0]] || null : null; },
-          book: function (date) { return bkBookUrl(p.id, date); }
+          city: city, id: c.id, parkId: c.parkId, park: c.park, label: c.label, coords: c.coords,
+          parkKey: city + "|" + c.park, free: c.free || {}
         });
-      });
-    });
-    oak.courts.forEach(function (c) {
-      list.push({
-        city: "Oakland", park: c.park, parkKey: "Oakland|" + c.park, label: c.label, coords: c.coords, address: c.address,
-        freeFor: function (k) { return c.free && c.free[k] || null; },
-        book: function (date) { return oakBookUrl(c, date); }
       });
     });
     return list;
   }
 
   function parksByCity() {
-    var map = { Berkeley: [], Oakland: [] }, seen = {};
+    var map = { Oakland: [], Berkeley: [] }, seen = {};
     allCourts().forEach(function (c) {
       if (seen[c.parkKey]) { seen[c.parkKey].n++; return; }
-      seen[c.parkKey] = { key: c.parkKey, park: c.park, city: c.city, n: 1, coords: c.coords };
+      seen[c.parkKey] = { key: c.parkKey, park: c.park, city: c.city, n: 1 };
       map[c.city].push(seen[c.parkKey]);
     });
     map.Oakland.sort(function (a, b) { return a.park.localeCompare(b.park); });
     return map;
   }
 
-  // ---------- Berkeley (live) ----------
-  function bkFetch(date, startHour, count) {
-    var p = new URLSearchParams();
-    BK_PARKS.forEach(function (pk) { pk.courts.forEach(function (c) { p.append("facilityIds[]", c[0]); }); });
-    p.set("date", ymd(date)); p.set("time", apiTime(startHour));
-    p.set("slotSize", "3600"); p.set("slotCount", String(count));
-    return fetch(BK_HOST + "/permits/getMultiFacilityAvailabilityBySlot/" + BK_API_KEY, { method: "POST", body: p })
+  // ---------- data ----------
+  function loadCity(city, file) {
+    return fetch("data/" + file + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (j) { if (!j.availability) throw new Error((j.errors || ["bad response"]).join("; ")); return j.availability; });
+      .then(function (j) {
+        cities[city].data = j;
+        cities[city].error = j.error || (!j.courts || !j.courts.length ? "no courts" : null);
+      })
+      .catch(function (e) { cities[city].error = e.message; })
+      .then(function () { cities[city].loaded = true; });
   }
-  function bkLoad(date) {
-    var key = ymd(date);
-    // The endpoint returns at most 10 slots per call.
-    return Promise.all([bkFetch(date, FIRST_HOUR, 10), bkFetch(date, FIRST_HOUR + 10, NHOURS - 10)]).then(function (parts) {
-      var out = {};
-      parts.forEach(function (av) {
-        Object.keys(av).forEach(function (fid) {
-          var bits = (out[fid] || "0".repeat(48)).split("");
-          Object.keys(av[fid]).forEach(function (k) {
-            var o = av[fid][k];
-            if (!o || typeof o !== "object" || !o.date || o.status !== 2) return;
-            var m = o.date.match(/(\d{2}):(\d{2}) (AM|PM)$/);
-            if (!m) return;
-            var h = (+m[1] % 12) + (m[3] === "PM" ? 12 : 0);
-            bits[h * 2] = "1"; bits[h * 2 + 1] = "1";
-          });
-          out[fid] = bits.join("");
-        });
-      });
-      state.bk[key] = out; state.bkAt[key] = new Date();
+  function refresh() {
+    loadedAt = Date.now();
+    return Promise.all([loadCity("Oakland", "oakland.json"), loadCity("Berkeley", "berkeley.json")]).then(function () {
+      renderParkChips(); renderResults(); renderStatus();
     });
   }
 
-  // ---------- Oakland (snapshot) ----------
-  function oakLoad() {
-    return fetch("data/oakland.json?t=" + Date.now(), { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (j) {
-        oak.courts = j.courts || []; oak.at = j.generatedAt ? new Date(j.generatedAt) : null;
-        oak.startDate = j.startDate; oak.days = j.days || 0;
-        oak.calendarId = j.calendarId; oak.widgetId = j.widgetId;
-        oak.loaded = true; oak.error = j.error || null;
-      })
-      .catch(function (e) { oak.loaded = true; oak.error = e.message; });
-  }
-
-  // ---------- rendering ----------
+  // ---------- rendering: controls ----------
   function renderDays() {
-    var el = $("days"); el.innerHTML = "";
-    var names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    var el = $("days"), names = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+    el.innerHTML = "";
     for (var i = 0; i < DAYS_SHOWN; i++) {
       var d = new Date(today); d.setDate(today.getDate() + i);
       var b = document.createElement("button");
       b.type = "button"; b.className = "day"; b.dataset.d = ymd(d);
       b.setAttribute("aria-pressed", ymd(d) === ymd(state.date) ? "true" : "false");
       b.innerHTML = "<small>" + (i === 0 ? "Today" : names[d.getDay()]) + "</small><b>" + d.getDate() + "</b>";
-      b.addEventListener("click", function () { setDate(parseYmd(this.dataset.d)); });
+      b.addEventListener("click", function () { state.date = parseYmd(this.dataset.d); renderDays(); renderResults(); });
       el.appendChild(b);
     }
-    $("date").value = ymd(state.date); $("date").min = ymd(today);
   }
 
   function renderParkChips() {
-    var el = $("cities"), map = parksByCity(); el.innerHTML = "";
+    var el = $("cities"), map = parksByCity();
+    el.innerHTML = "";
     ["Oakland", "Berkeley"].forEach(function (city) {
       var parks = map[city];
       var wrap = document.createElement("div"); wrap.className = "city";
@@ -329,7 +332,7 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
       wrap.innerHTML = "<div class='city-head'><span class='label'>" + city + "</span>" +
         (parks.length ? "<button type='button' data-city='" + city + "'>" + (allOn ? "None" : "All") + "</button>" : "") + "</div>";
       var chips = document.createElement("div"); chips.className = "chips";
-      if (!parks.length) chips.innerHTML = "<span class='near'>" + (oak.loaded ? "Oakland data unavailable right now." : "Loading…") + "</span>";
+      if (!parks.length) chips.innerHTML = "<span class='near'>" + (cities[city].loaded ? city + " data unavailable right now." : "Loading…") + "</span>";
       parks.forEach(function (p) {
         var b = document.createElement("button");
         b.type = "button"; b.className = "chip"; b.dataset.key = p.key;
@@ -356,63 +359,182 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
     $("sortNear").setAttribute("aria-pressed", state.sort === "near" ? "true" : "false");
   }
 
+  function winText() {
+    if (!state.win) return "Any time";
+    return halfLabel(FIRST_HOUR * 2 + state.win[0]) + "–" + halfLabel(FIRST_HOUR * 2 + state.win[1]);
+  }
+
+  function renderTimeFilter() {
+    var on = !!state.win, a = on ? state.win[0] : 0, b = on ? state.win[1] : NHALF;
+    $("track").classList.toggle("off", !on);
+    $("fill").style.left = (a / NHALF * 100) + "%";
+    $("fill").style.width = ((b - a) / NHALF * 100) + "%";
+    $("hA").style.left = (a / NHALF * 100) + "%";
+    $("hB").style.left = (b / NHALF * 100) + "%";
+    [["hA", a], ["hB", b]].forEach(function (x) {
+      var h = $(x[0]);
+      h.setAttribute("aria-valuemin", "0"); h.setAttribute("aria-valuemax", String(NHALF));
+      h.setAttribute("aria-valuenow", String(x[1]));
+      h.setAttribute("aria-valuetext", halfLabel(FIRST_HOUR * 2 + x[1]));
+    });
+    var v = $("tfValue"); v.textContent = winText(); v.classList.toggle("off", !on);
+    $("durRow").hidden = !on;
+    [].forEach.call($("presets").children, function (c, i) {
+      var w = PRESETS[i].win;
+      var match = (!w && !on) || (w && on && w[0] === a && w[1] === b);
+      c.setAttribute("aria-pressed", match ? "true" : "false");
+    });
+    [].forEach.call($("durChips").children, function (c, i) {
+      c.setAttribute("aria-pressed", DURATIONS[i][0] === state.dur ? "true" : "false");
+    });
+  }
+
+  function buildTimeFilter() {
+    var hours = "";
+    for (var h = FIRST_HOUR; h <= LAST_HOUR; h++) hours += "<span>" + hourLabel(h, true) + "</span>";
+    $("tfHours").innerHTML = hours;
+    PRESETS.forEach(function (p) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip";
+      b.innerHTML = esc(p.label) + (p.sub ? " <small>" + p.sub + "</small>" : "");
+      b.addEventListener("click", function () { setWin(p.win ? p.win.slice() : null); });
+      $("presets").appendChild(b);
+    });
+    DURATIONS.forEach(function (d) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "chip"; b.textContent = d[1];
+      b.addEventListener("click", function () {
+        state.dur = d[0];
+        if (state.win && state.win[1] - state.win[0] < state.dur) setWin(state.win.slice()); else { renderTimeFilter(); renderResults(); }
+      });
+      $("durChips").appendChild(b);
+    });
+
+    // Dragging: a press anywhere on the track moves the nearer handle, then follows the finger.
+    var track = $("track"), active = null, raf = 0;
+    function valFromX(x) {
+      var r = track.getBoundingClientRect();
+      return Math.max(0, Math.min(NHALF, Math.round((x - r.left) / r.width * NHALF)));
+    }
+    function moveTo(v) {
+      var w = state.win ? state.win.slice() : [0, NHALF];
+      if (active === "a") w[0] = v; else w[1] = v;
+      setWin(w, active, true);
+    }
+    track.addEventListener("pointerdown", function (e) {
+      var v = valFromX(e.clientX), w = state.win || [0, NHALF];
+      if (e.target === $("hA")) active = "a";
+      else if (e.target === $("hB")) active = "b";
+      else active = Math.abs(v - w[0]) <= Math.abs(v - w[1]) && !(v > w[1]) ? "a" : "b";
+      try { track.setPointerCapture(e.pointerId); } catch (err) {}
+      moveTo(v);
+      e.preventDefault();
+    });
+    track.addEventListener("pointermove", function (e) {
+      if (!active) return;
+      var v = valFromX(e.clientX);
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(function () { moveTo(v); });
+    });
+    function end() { active = null; }
+    track.addEventListener("pointerup", end);
+    track.addEventListener("pointercancel", end);
+
+    [["hA", "a"], ["hB", "b"]].forEach(function (x) {
+      $(x[0]).addEventListener("keydown", function (e) {
+        var w = state.win ? state.win.slice() : [0, NHALF], i = x[1] === "a" ? 0 : 1, step = 0;
+        if (e.key === "ArrowLeft" || e.key === "ArrowDown") step = -1;
+        else if (e.key === "ArrowRight" || e.key === "ArrowUp") step = 1;
+        else if (e.key === "Home") step = -NHALF;
+        else if (e.key === "End") step = NHALF;
+        else return;
+        e.preventDefault();
+        w[i] = Math.max(0, Math.min(NHALF, w[i] + step));
+        setWin(w, x[1]);
+      });
+    });
+  }
+
+  // Keep the window at least as long as the minimum duration, moving the other edge if needed.
+  function setWin(w, moved, live) {
+    if (w) {
+      var d = state.dur;
+      w[0] = Math.max(0, Math.min(NHALF, w[0])); w[1] = Math.max(0, Math.min(NHALF, w[1]));
+      if (w[1] - w[0] < d) {
+        if (moved === "a") { w[1] = Math.min(NHALF, w[0] + d); w[0] = Math.min(w[0], w[1] - d); }
+        else { w[0] = Math.max(0, w[1] - d); w[1] = Math.max(w[1], w[0] + d); }
+      }
+    }
+    state.win = w;
+    renderTimeFilter();
+    renderResults();
+  }
+
+  // ---------- rendering: results ----------
   function pastHalf(half) {
     if (ymd(state.date) !== ymd(today)) return false;
     var n = new Date();
     return half < n.getHours() * 2 + (n.getMinutes() >= 30 ? 1 : 0);
   }
 
-  function visibleCourts() {
+  function sortedCourts() {
     var list = allCourts().filter(function (c) { return state.hidden.indexOf(c.parkKey) < 0; });
     if (state.sort === "near" && state.here) {
       list.forEach(function (c) { c.dist = c.coords ? miles(state.here, c.coords) : 99; });
       list.sort(function (a, b) { return a.dist - b.dist || a.label.localeCompare(b.label, undefined, { numeric: true }); });
     } else {
       list.sort(function (a, b) {
-        return a.city.localeCompare(b.city) * -1 || a.park.localeCompare(b.park) || a.label.localeCompare(b.label, undefined, { numeric: true });
+        return -a.city.localeCompare(b.city) || a.park.localeCompare(b.park) || a.label.localeCompare(b.label, undefined, { numeric: true });
       });
     }
     return list;
   }
 
-  function renderResults() {
-    var key = ymd(state.date);
-    var courts = visibleCourts();
+  // Half-hour range [lo, hi) of the day being considered.
+  function range() {
+    return state.win ? [FIRST_HOUR * 2 + state.win[0], FIRST_HOUR * 2 + state.win[1]] : [FIRST_HOUR * 2, (LAST_HOUR + 1) * 2];
+  }
+  function openIn(f, lo, hi) {
+    var total = 0, run = 0, best = 0;
+    for (var i = lo; i < hi; i++) {
+      if (f[i] === "1" && !pastHalf(i)) { total++; run++; if (run > best) best = run; }
+      else run = 0;
+    }
+    return { total: total, best: best };
+  }
+  function hrs(halves) { var h = halves / 2; return (h % 1 ? h.toFixed(1) : h) + " hr" + (h === 1 ? "" : "s"); }
 
-    function openHalves(f) {
-      var n = 0;
-      for (var i = FIRST_HOUR * 2; i < (LAST_HOUR + 1) * 2; i++) if (f[i] === "1" && !pastHalf(i)) n++;
-      return n;
-    }
-    function hrsLabel(halves) {
-      var h = halves / 2;
-      return (h % 1 ? h.toFixed(1) : h) + " open hr" + (h === 1 ? "" : "s");
-    }
+  function renderResults() {
+    if (!cities.Oakland.loaded || !cities.Berkeley.loaded) return;
+    var key = ymd(state.date), r = range(), lo = r[0], hi = r[1], filtering = !!state.win;
+    var courts = sortedCourts();
 
     var hoursRow = "<div></div><div class='hours'>";
     for (var h = FIRST_HOUR; h <= LAST_HOUR; h++) hoursRow += "<span>" + hourLabel(h, true) + "</span>";
     hoursRow += "</div>";
 
-    // Group courts by park, keeping the sort order of the first court in each park.
-    var groups = [], byKey = {};
+    // Group by park in sort order; keep only courts that match the time filter.
+    var groups = [], byKey = {}, matched = 0;
     courts.forEach(function (c) {
       if (!byKey[c.parkKey]) { byKey[c.parkKey] = { c: c, courts: [], open: 0, hasData: false }; groups.push(byKey[c.parkKey]); }
-      var g = byKey[c.parkKey], f = c.freeFor(key);
-      g.courts.push(c);
-      if (f) { g.hasData = true; g.open += openHalves(f); }
+      var g = byKey[c.parkKey], f = c.free[key];
+      if (!f) return;
+      g.hasData = true;
+      var o = openIn(f, lo, hi);
+      var ok = filtering ? o.best >= state.dur : o.total > 0;
+      if (ok) { g.courts.push(c); g.open += o.total; matched++; }
     });
 
-    var full = [], missing = [];
+    var none = [], missing = [];
     var html = groups.map(function (g) {
       var first = g.c;
       if (!g.hasData) { missing.push(first); return ""; }
-      if (!g.open) { full.push(first); return ""; }
+      if (!g.courts.length) { none.push(first); return ""; }
       var rows = g.courts.map(function (c) {
-        var f = c.freeFor(key), cells = "", url = c.book(state.date);
+        var f = c.free[key], url = bookUrl(c, state.date), cells = "";
         for (var hr = FIRST_HOUR; hr <= LAST_HOUR; hr++) {
           var i0 = hr * 2, i1 = i0 + 1, cls = "cell", st, open = false;
-          if (!f) { cls += " nodata"; st = "no data"; }
-          else if (pastHalf(i1)) { cls += " past"; st = "past"; }
+          if (pastHalf(i1)) { cls += " past"; st = "past"; }
           else {
             var o0 = f[i0] === "1" && !pastHalf(i0), o1 = f[i1] === "1";
             open = o0 || o1;
@@ -421,68 +543,58 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
             else if (o1) { cls += " half second"; st = "open from " + (hr % 12 || 12) + ":30"; }
             else st = "booked";
           }
+          if (filtering) cls += (i0 >= lo && i1 < hi) ? " inwin" : (i1 < lo || i0 >= hi) ? " outwin" : " inwin";
           var t = esc(c.park + " " + c.label + ", " + hourLabel(hr) + "–" + hourLabel(hr + 1) + ": " + st + (open ? ". Tap to book." : ""));
           cells += open
             ? "<a class='" + cls + "' href='" + esc(url) + "' target='_blank' rel='noopener' title='" + t + "' aria-label='" + t + "'></a>"
             : "<span class='" + cls + "' title='" + t + "' aria-label='" + t + "'></span>";
         }
-        var name = c.city === "Oakland" ? "<a href='" + esc(url) + "' target='_blank' rel='noopener'>" + esc(c.label) + "</a>" : esc(c.label);
-        return "<div class='court-name'>" + name + "</div><div class='strip'>" + cells + "</div>";
+        return "<div class='court-name'><a href='" + esc(url) + "' target='_blank' rel='noopener'>" + esc(c.label) + "</a></div><div class='strip'>" + cells + "</div>";
       }).join("");
       var dist = state.sort === "near" && state.here && first.coords ? " · " + first.dist.toFixed(1) + " mi" : "";
-      var link = first.city === "Berkeley"
-        ? " · <a href='" + esc(first.book(state.date)) + "' target='_blank' rel='noopener'>Book ↗</a>"
-        : "";
       return "<div class='park'><div class='park-head'><h2>" + esc(first.park) + "<span class='tag'>" + first.city + "</span></h2>" +
-        "<span class='hrs'>" + hrsLabel(g.open) + dist + link + "</span></div>" +
+        "<span class='hrs'>" + hrs(g.open) + " open" + (filtering ? " in window" : "") + dist + "</span></div>" +
         "<div class='grid'>" + hoursRow + rows + "</div></div>";
     }).join("");
 
-    if (!html) html = groups.length ? "<p class='empty'>Nothing open in your selected parks on this date.</p>" : "<p class='empty'>No parks selected.</p>";
+    var top = "";
+    if (filtering) {
+      var durLabel = DURATIONS.filter(function (d) { return d[0] === state.dur; })[0][1];
+      top = "<p class='matchline'><b>" + matched + "</b> court" + (matched === 1 ? "" : "s") + " with " + durLabel + "+ free in a row, " + esc(winText()) + "</p>";
+      if (ymd(state.date) === ymd(today) && pastHalf(hi - 1)) top += "<p class='near'>That window has already passed today.</p>";
+    }
+    if (!html) html = groups.length
+      ? "<p class='empty'>" + (filtering ? "Nothing matches in your selected parks. Try a wider window or a shorter minimum." : "Nothing open in your selected parks on this date.") + "</p>"
+      : "<p class='empty'>No parks selected.</p>";
+
     var notes = [];
-    if (full.length) notes.push("Fully booked: " + full.map(function (c) { return esc(c.park) + " <span class='tag'>" + c.city + "</span>"; }).join(", "));
-    var missOak = missing.filter(function (c) { return c.city === "Oakland"; });
-    var missBk = missing.filter(function (c) { return c.city === "Berkeley"; });
-    if (missOak.length && oak.loaded) notes.push(oak.error ? "Oakland data is unavailable right now." : "Oakland data covers " + oak.days + " days from " + esc(oak.startDate || "today") + "; this date isn't in it.");
-    if (missBk.length) notes.push(state.bkErr ? "Berkeley couldn't be loaded. Tap the status at the top to retry." : "Berkeley is loading…");
+    if (none.length) notes.push((filtering ? "No match: " : "Fully booked: ") + none.map(function (c) { return esc(c.park) + "<span class='tag'>" + c.city + "</span>"; }).join(", "));
+    ["Oakland", "Berkeley"].forEach(function (city) {
+      if (!missing.some(function (c) { return c.city === city; })) return;
+      var d = cities[city].data;
+      notes.push(cities[city].error ? city + " data is unavailable right now." :
+        city + " data covers " + d.days + " days from " + esc(d.startDate) + "; this date isn't in it yet.");
+    });
     if (notes.length) html += "<div class='booked-list'>" + notes.map(function (n) { return "<p class='near'>" + n + "</p>"; }).join("") + "</div>";
-    $("detail").innerHTML = html;
+    $("detail").innerHTML = top + html;
   }
 
   function renderStatus() {
-    var key = ymd(state.date), parts = [];
-    if (state.bkAt[key]) parts.push("Berkeley live · " + state.bkAt[key].toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
-    else if (state.bkErr) parts.push("<span class='err'>Berkeley: " + esc(state.bkErr) + "</span>");
-    if (oak.error && !oak.courts.length) parts.push("<span class='err'>Oakland unavailable</span>");
-    else if (oak.at) {
-      var stale = Date.now() - oak.at.getTime() > 45 * 60000;
-      parts.push("<span class='" + (stale ? "warn" : "") + "'>Oakland " + ago(oak.at) + "</span>");
+    var parts = [], times = [];
+    ["Oakland", "Berkeley"].forEach(function (city) {
+      var c = cities[city];
+      if (c.error && !(c.data && c.data.courts && c.data.courts.length)) parts.push("<span class='err'>" + city + " unavailable</span>");
+      else if (c.data && c.data.generatedAt) times.push(new Date(c.data.generatedAt));
+    });
+    if (times.length) {
+      var oldest = new Date(Math.min.apply(null, times.map(function (t) { return t.getTime(); })));
+      var stale = Date.now() - oldest.getTime() > 45 * 60000;
+      parts.unshift("<span class='" + (stale ? "warn" : "") + "'>Updated " + ago(oldest) + "</span>");
     }
     $("status").innerHTML = parts.join("<br>") || "Loading…";
   }
 
-  function refresh() {
-    var key = ymd(state.date);
-    document.querySelector(".wrap").classList.add("loading");
-    state.bkErr = null;
-    var bk = bkLoad(state.date).catch(function (e) { state.bkErr = e.message; });
-    var ok = oakLoad().then(function () { renderParkChips(); });
-    return Promise.all([bk, ok]).then(function () {
-      if (ymd(state.date) === key) renderResults();
-      renderStatus();
-      document.querySelector(".wrap").classList.remove("loading");
-    });
-  }
-
-  function setDate(d) {
-    state.date = d;
-    renderDays();
-    renderResults();
-    refresh();
-  }
-
   // ---------- wiring ----------
-  $("date").addEventListener("change", function () { if (this.value) setDate(parseYmd(this.value)); });
   $("status").addEventListener("click", refresh);
   $("sortPark").addEventListener("click", function () { state.sort = "park"; store("sort", "park"); renderParkChips(); renderResults(); });
   $("sortNear").addEventListener("click", function () {
@@ -498,12 +610,11 @@ a.cell:hover, a.cell:active { box-shadow: inset 0 0 0 2px var(--ball); }
     }, { maximumAge: 10 * 60000, timeout: 10000 });
   });
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState !== "visible") return;
-    var t = state.bkAt[ymd(state.date)];
-    if (!t || Date.now() - t.getTime() > 60000) refresh();
+    if (document.visibilityState === "visible" && Date.now() - loadedAt > 60000) refresh();
   });
+  setInterval(function () { renderStatus(); if (ymd(state.date) === ymd(today)) renderResults(); }, 60000);
 
-  renderDays(); renderParkChips();
+  buildTimeFilter(); renderTimeFilter(); renderDays(); renderParkChips();
   refresh();
 })();
 </script>
