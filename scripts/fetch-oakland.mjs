@@ -106,7 +106,8 @@ async function listCourts() {
     headers: { "X-Requested-With": "XMLHttpRequest", Referer: BASE + listPath },
   });
   const j = await res.json();
-  return j.facilities.filter((f) => /tennis/i.test(f.FacilityType));
+  // Montclair's "PB Court" entries are listed as tennis courts but are pickleball courts.
+  return j.facilities.filter((f) => /tennis/i.test(f.FacilityType) && !/\bPB Court\b/i.test(f.Name));
 }
 
 async function courtAvailability(fac, startYmd) {
